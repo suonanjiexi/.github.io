@@ -85,15 +85,15 @@
         firstConnect = false;
         disconnect_update("断开连接");
         document.getElementById('url').removeAttribute('disabled');
-        document.getElementById('namespace').removeAttribute("disabled")
-        document.getElementById('roomId').removeAttribute("disabled")
+        document.getElementById('namespace').removeAttribute("disabled");
+        document.getElementById('roomId').removeAttribute("disabled");
     });
     socket.on('connect_error', function (error) {
         console.log(error);
         connect_error_update("连接失败");
-        document.getElementById('url').removeAttribute('disabled');
-        document.getElementById('namespace').removeAttribute("disabled")
-        document.getElementById('roomId').removeAttribute("disabled")
+        document.getElementById('url').removeAttribute("disabled");
+        document.getElementById('namespace').removeAttribute("disabled");
+        document.getElementById('roomId').removeAttribute("disabled");
         //恢复到polling
         //socket.io.opts.transports = ["polling", "websocket"];
     });
