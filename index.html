@@ -1,11 +1,212 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>yaorongke</title>
+    <meta content="width=device-width,initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+    <title>websocket-java-socketIo</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
 </head>
 <body>
-    <h1>yaorongke的个人主页</h1>
-    <h1>Hello ~</h1>
+<h1>Socket.io Test</h1>
+<div>
+    <label>
+        <span>namespace</span>
+        <input id="namespace" type="text" value="outline"/>
+        <span>roomId</span>
+        <input id="roomId" type="text" value="1790992045209292800"/>
+        <span>msgType</span>
+        <input id="msgType" type="text" value="monitor_message"/>
+        <span>内容</span>
+        <input id="content" type="text" value="ping"/>
+    </label>
+</div>
+<button id="connect" onClick='connect()'>连接</button>
+<button id="disconnect" onClick='disconnect()'>断开</button>
+<button id="send" onClick='send()'>发送消息</button>
+<button id="clear" onClick='clearMessageList()'>清空</button>
+<div id="status">
+    <p>状态</p>
+</div>
+<div id="message-container">
+    <span id="show-messages-btn">显示服务端消息:</span>
+    <div id="messages-dropdown" style="display: block;">
+        <ul id="message-list"></ul>
+    </div>
+</div>
 </body>
+<script type="text/javascript">
+    const namespace = document.getElementById('namespace').value;
+    const outlineId = document.getElementById('roomId').value;
+    // 存储已接收的服务端消息
+    let messages = [];
+    let socket = io.connect(
+        "https://ws.livechamp.co/"+namespace,
+        {
+            autoConnect: false, //是否自动连接
+            upgrade: true,   //客户端是否应尝试将传输从 HTTP 长轮询升级为更好的传输。
+            reconnection: false, // 自动重连（默认为 true）
+            reconnectionAttempts: 300000, // 最大重试次数（默认为 Infinity）
+            reconnectionDelay: 1000, // 重试间隔时间（默认为 1000ms）
+            timeout: 20000, // 连接超时时间（默认为 20000ms）
+            randomizationFactor: 0.5, // 重试间隔随机因子（默认为 0.5）
+            path: '/socket.io',
+            transports: ['polling', 'websocket'],
+            extraHeaders: {      // 设置额外的HTTP头部
+                'LC-API-VERSION': "2024-06-01",
+                'Authorization': "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYXB0YWluSWQiOiIxNzgzMzczMTMzNDgzMzQ3OTY4IiwiZXhwIjoxNzE2MTcyMzkwLCJ1c2VySWQiOiIxNzgzMzczMTMzNDgzMzQ3OTY4In0.UZXqCiSXzDueh_E_E94ID97IR2hDOM6r4wq1iMntnvA",
+                'LC-USERAGENT': "web/1.0.0",
+                'Lc-Locale': "zh-CN",
+            },
+            query: {
+                terminal: 1,//1:web 2.ios-app 3.android-app
+                roomId: outlineId, //outline id
+                name: "索南杰夕",
+                avatar: "https://kaibo-v3-static-prod.oss-accelerate.aliyuncs.com/image/17097182121874055900.jpg",
+            }
+        }
+    );
+    let firstConnect = false;
+    //监听服务器连接事件
+    socket.on('connect', function () {
+        status_update("连接成功");
+        firstConnect = true
+        document.getElementById('namespace').setAttribute('disabled', 'disabled');
+        document.getElementById('roomId').setAttribute('disabled', 'disabled');
+    });
+    socket.on('reconnect', function () {
+        reconnect_update("重新连接成功");
+    });
+    //监听服务器关闭服务事件
+    socket.on('disconnect', function () {
+        firstConnect = false;
+        disconnect_update("断开连接");
+        document.getElementById('namespace').removeAttribute("disabled")
+        document.getElementById('roomId').removeAttribute("disabled")
+    });
+    socket.on('connect_error', function (error) {
+        console.log(error);
+        connect_error_update("连接失败");
+        document.getElementById('namespace').removeAttribute("disabled")
+        document.getElementById('roomId').removeAttribute("disabled")
+        //恢复到polling
+        //socket.io.opts.transports = ["polling", "websocket"];
+    });
+    socket.on('event', function (data) {
+        message(JSON.stringify(data))
+        console.log("服务器发送的消息是：" + JSON.stringify(data));
+    });
+
+    // 添加消息至消息列表
+    function addMessage(data) {
+        messages.push({
+            content: data,
+            date: getDate()
+        });
+    }
+
+    // 更新下拉框中的消息列表
+    function updateMessageDropdown() {
+        const messageListElement = document.getElementById('message-list');
+        messageListElement.innerHTML = '';
+        messages.forEach((msg) => {
+            const listItem = document.createElement('li');
+            const data = JSON.parse(msg.content);
+            let msgType = data.msgType;
+            listItem.textContent = `【${msgType}】: ${msg.date}:  ${msg.content}`;
+            messageListElement.appendChild(listItem);
+        });
+    }
+
+    function message(data) {
+        addMessage(data);
+        updateMessageDropdown();
+    }
+
+    function getDate() {
+        let myDate = new Date();
+        let y = myDate.getFullYear();    //获取完整的年份(4位,1970-????)
+        let m = myDate.getMonth() + 1;       //获取当前月份(0-11,0代表1月)
+        let d = myDate.getDate();        //获取当前日(1-31)
+        let t = myDate.getTime();        //获取当前时间(从1970.1.1开始的毫秒数)
+        let h = myDate.getHours();       //获取当前小时数(0-23)
+        let min = myDate.getMinutes();     //获取当前分钟数(0-59)
+        let s = myDate.getSeconds();     //获取当前秒数(0-59)
+        let ms = myDate.getMilliseconds();    //获取当前毫秒数(0-999)
+        if (m >= 1 && m <= 9) {
+            m = "0" + m;
+        }
+        if (d >= 0 && d <= 9) {
+            d = "0" + d;
+        }
+        if (h >= 0 && h <= 9) {
+            h = "0" + h;
+        }
+        if (min >= 0 && min <= 9) {
+            min = "0" + min;
+        }
+        if (s >= 0 && s <= 9) {
+            s = "0" + s;
+        }
+        let fh = '-';
+        let fh2 = ':'
+        return y + fh + m + fh + d + ' ' + h + fh2 + min + fh2 + s + fh2 + ms;//当前时间
+    }
+
+    function status_update(txt) {
+        document.getElementById('status').innerHTML = "<p style='color: #0fde0f'>" + txt + "  --  " + getDate() + "</p>";
+    }
+
+    function reconnect_update(txt) {
+        document.getElementById('status').innerHTML = "<p style='color: #2ed788'>" + txt + "  --  " + getDate() + "</p>";
+    }
+
+    function disconnect_update(txt) {
+        document.getElementById('status').innerHTML = "<p style='color: #e8e882'>" + txt + "  --  " + getDate() + "</p>";
+    }
+
+    function connect_error_update(txt) {
+        document.getElementById('status').innerHTML = "<p style='color: #ea5252'>" + txt + "  --  " + getDate() + "</p>";
+    }
+
+    //点击发送消息触发
+    function send() {
+        console.log("发送群消息")
+        const content = document.getElementById('content').value;
+        const namespace = document.getElementById('namespace').value;
+        const roomId = document.getElementById('roomId').value;
+        const msgType = document.getElementById('msgType').value;
+        const data = {
+            namespace: namespace,
+            roomId: roomId,
+            event: 'event',
+            msgId: Date.now(),
+            data: content,
+            msgType: msgType,
+            timestamp: Date.now(),
+        };
+        socket.emit(event, JSON.stringify(data))
+    }
+
+    //断开连接
+    function disconnect() {
+        console.log("发起断开连接请求")
+        socket.disconnect();
+        //清空消息列表
+        clearMessageList()
+    }
+
+    function connect() {
+        console.log("发起连接请求")
+        if (firstConnect) {
+            status_update("已经连接成功");
+            return
+        }
+        socket.connect();
+    }
+
+    function clearMessageList() {
+        messages = []
+        document.getElementById('message-list').innerHTML = '';
+    }
+</script>
 </html>
