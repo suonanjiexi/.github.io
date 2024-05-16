@@ -10,14 +10,16 @@
 <h1>Socket.io Test</h1>
 <div>
     <label>
+        <span>url</span>
+        <input id="url" type="text" value="url"/>
         <span>namespace</span>
-        <input id="namespace" type="text" value="outline"/>
+        <input id="namespace" type="text" value=""/>
         <span>roomId</span>
-        <input id="roomId" type="text" value="1790992045209292800"/>
+        <input id="roomId" type="text" value=""/>
         <span>msgType</span>
-        <input id="msgType" type="text" value="monitor_message"/>
+        <input id="msgType" type="text" value=""/>
         <span>内容</span>
-        <input id="content" type="text" value="ping"/>
+        <input id="content" type="text" value=""/>
     </label>
 </div>
 <button id="connect" onClick='connect()'>连接</button>
@@ -35,12 +37,13 @@
 </div>
 </body>
 <script type="text/javascript">
+    const url = document.getElementById('url').value;
     const namespace = document.getElementById('namespace').value;
     const outlineId = document.getElementById('roomId').value;
     // 存储已接收的服务端消息
     let messages = [];
     let socket = io.connect(
-        "https://ws.livechamp.co/"+namespace,
+        url+namespace,
         {
             autoConnect: false, //是否自动连接
             upgrade: true,   //客户端是否应尝试将传输从 HTTP 长轮询升级为更好的传输。
@@ -70,6 +73,7 @@
     socket.on('connect', function () {
         status_update("连接成功");
         firstConnect = true
+        document.getElementById('url').setAttribute('disabled', 'disabled');
         document.getElementById('namespace').setAttribute('disabled', 'disabled');
         document.getElementById('roomId').setAttribute('disabled', 'disabled');
     });
@@ -80,12 +84,14 @@
     socket.on('disconnect', function () {
         firstConnect = false;
         disconnect_update("断开连接");
+        document.getElementById('url').removeAttribute('disabled');
         document.getElementById('namespace').removeAttribute("disabled")
         document.getElementById('roomId').removeAttribute("disabled")
     });
     socket.on('connect_error', function (error) {
         console.log(error);
         connect_error_update("连接失败");
+        document.getElementById('url').removeAttribute('disabled');
         document.getElementById('namespace').removeAttribute("disabled")
         document.getElementById('roomId').removeAttribute("disabled")
         //恢复到polling
